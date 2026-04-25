@@ -10,8 +10,10 @@ export interface Profile {
 }
 
 // In dev, Vite proxies these paths to the Flask backend (see vite.config.ts),
-// so we use relative URLs here.
-const BASE_URL = "";
+// so we use relative URLs here. In production (GitHub Pages), call the hosted API.
+const BASE_URL = import.meta.env.PROD
+  ? "https://product-scanner-3gh1.onrender.com"
+  : "";
 
 export async function register(body: {
   username: string;
