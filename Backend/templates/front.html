@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Choose Profile | Health Scanner</title>
+  <style>
+    body {
+      background-color: #f5f5f5;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      padding: 24px;
+      width: 360px;
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 1.4rem;
+    }
+    label {
+      display: block;
+      font-size: 0.9rem;
+      margin-top: 10px;
+    }
+    input, select {
+      width: 100%;
+      padding: 6px 8px;
+      margin-top: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 12px;
+      padding: 8px 12px;
+      background: #222;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button.secondary {
+      background: #eee;
+      color: #222;
+      margin-left: 8px;
+    }
+    #status {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: #555;
+      min-height: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Who are we checking for?</h1>
+
+    <h3>Create profile</h3>
+    <label>
+      Username <span style="font-size:0.8rem;color:#666;">(unique)</span>
+      <input id="name" type="text" autocomplete="username" placeholder="Choose a unique name">
+    </label>
+    <label>
+      Age
+      <input id="age" type="number" min="1" max="120">
+    </label>
+    <label>
+      Gender
+      <select id="gender">
+        <option value="">Select</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+      </select>
+    </label>
+    <label>
+      Height (cm)
+      <input id="height" type="number" min="80" max="250">
+    </label>
+    <label>
+      Weight (kg)
+      <input id="weight" type="number" min="10" max="250">
+    </label>
+    <button id="create-profile">Save profile & continue</button>
+
+    <hr style="margin:16px 0;">
+
+    <h3>Or select existing</h3>
+    <label>
+      Profile
+      <select id="profile-select"></select>
+    </label>
+    <button id="use-profile" class="secondary">Continue with selected</button>
+
+    <div id="status"></div>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const selectEl = document.getElementById("profile-select");
+
+    async function loadProfiles() {
+      statusEl.textContent = "Loading profiles...";
+      try {
+        const res = await fetch("/profiles");
+        const data = await res.json();
+        const profiles = data.profiles || [];
+        selectEl.innerHTML = "";
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = profiles.length ? "Choose a profile" : "No profiles yet";
+        selectEl.appendChild(placeholder);
+        profiles.forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p.id;
+          opt.textContent = `${p.name || "Profile " + p.id} (${p.age}y, ${p.gender})`;
+          selectEl.appendChild(opt);
+        });
+        statusEl.textContent = profiles.length ? "" : "Create a profile to get started.";
+      } catch (e) {
+        console.error(e);
+        statusEl.textContent = "Failed to load profiles.";
+      }
+    }
+
+    document.getElementById("create-profile").addEventListener("click", async () => {
+      const name = document.getElementById("name").value.trim();
+      const age = parseInt(document.getElementById("age").value, 10);
+      const gender = document.getElementById("gender").value;
+      const height_cm = parseFloat(document.getElementById("height").value);
+      const weight_kg = parseFloat(document.getElementById("weight").value);
+
+      if (!name) {
+        statusEl.textContent = "Please enter a username (must be unique).";
+        return;
+      }
+
+      statusEl.textContent = "Saving profile...";
+      try {
+        const res = await fetch("/profiles", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ name, age, gender, height_cm, weight_kg })
+        });
+        const data = await res.json();
+        if (data.error) {
+          statusEl.textContent = data.error;
+          return;
+        }
+        // Redirect to scanner page with this profile_id
+        window.location.href = `/scan-ui?profile_id=${data.id}`;
+      } catch (e) {
+        console.error(e);
+        statusEl.textContent = "Failed to save profile.";
+      }
+    });
+
+    document.getElementById("use-profile").addEventListener("click", () => {
+      const id = selectEl.value;
+      if (!id) {
+        statusEl.textContent = "Please select a profile.";
+        return;
+      }
+      window.location.href = `/scan-ui?profile_id=${id}`;
+    });
+
+    loadProfiles();
+  </script>
+</body>
+</html>

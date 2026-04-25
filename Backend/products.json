@@ -1,0 +1,10 @@
+{
+  "1234567890": {
+    "name": "Chocolate Bar",
+    "description": "Chocolate bar with sugar, cocoa, milk, E150"
+  },
+  "0987654321": {
+    "name": "Potato Chips",
+    "description": "Potato chips with salt, vegetable oil, artificial flavors"
+  }
+}

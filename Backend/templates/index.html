@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Health Scanner</title>
+
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+
+<style>
+body {
+    background-color: white;
+    color: black;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 20px;
+    font-family: Arial, sans-serif;
+}
+
+#scanner {
+    width: 320px;
+    height: 240px;
+    border: 3px solid #444;
+    margin-bottom: 20px;
+    position: relative;
+    background-color: black;
+}
+
+#scanner video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#scanner::after {
+    content: "";
+    position: absolute;
+    border: 3px solid red;
+    width: 80%;
+    height: 40%;
+    top: 30%;
+    left: 10%;
+}
+
+#result {
+    white-space: pre-wrap;
+    text-align: left;
+    width: 80%;
+    margin: 0 auto;
+    padding: 10px;
+    border: 2px dashed #888;
+    background-color: #f4f4f4;
+    color: #000;
+}
+
+button {
+    background-color: #222;
+    color: white;
+    border: 2px solid #222;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+button:hover {
+    background-color: #444;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Scan a product</h2>
+
+<p id="profile-label" style="margin-bottom: 8px; font-size: 0.9rem; color: #555;"></p>
+
+<button id="start-scan">Start Scan</button>
+
+<div id="scanner">
+  <video id="scanner-video" autoplay playsinline></video>
+</div>
+
+<div id="result">
+Scan a barcode to see product details, health analysis, and AI summary.
+</div>
+
+<script>
+function getProfileIdFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("profile_id");
+  return id ? parseInt(id, 10) : null;
+}
+
+const currentProfileId = getProfileIdFromUrl();
+const profileLabel = document.getElementById("profile-label");
+
+if (currentProfileId) {
+  profileLabel.textContent = `Using profile id ${currentProfileId}.`;
+} else {
+  profileLabel.textContent = "No profile id in URL. Go back and select a profile.";
+}
+
+let codeReader = null;
+let scanning = false;
+
+document.getElementById('start-scan').addEventListener('click', async () => {
+    if (scanning) return;
+    if (!currentProfileId) {
+      alert("No profile selected. Go back to the profile page and choose one.");
+      return;
+    }
+
+    scanning = true;
+
+    codeReader = new ZXing.BrowserBarcodeReader();
+    const resultDiv = document.getElementById("result");
+    const videoElement = document.getElementById("scanner-video");
+
+    resultDiv.innerText = "Starting camera...";
+
+    try {
+        codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
+            if (result) {
+                const barcode = result.text;
+                scanning = false;
+                codeReader.reset();
+
+                resultDiv.innerText = "Scanned barcode: " + barcode + "\nFetching product info...";
+
+                fetch("/scan", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        barcode,
+                        profile_id: currentProfileId
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        resultDiv.innerText = data.error;
+                        return;
+                    }
+
+                    const h = data.health || {};
+                    const pe = h.profile_evaluation || null;
+
+                    const good = (h.good_ingredients || []).join(", ") || "None detected";
+                    const bad = (h.bad_ingredients || []).join(", ") || "None detected";
+
+                    const highList = (h.high_nutrients || [])
+                        .map(n => `${n.nutrient}: ${n.amount_per_100g} g / 100 g`)
+                        .join("\n") || "No nutrients flagged as high.";
+
+                    let profileText = "No personalised profile notes.";
+                    if (pe) {
+                        const limit = pe.daily_sugar_limit_g != null ? pe.daily_sugar_limit_g + " g" : "N/A";
+                        const sugar100 = pe.sugar_per_100g != null ? pe.sugar_per_100g + " g" : "N/A";
+                        const pct = pe.sugar_percentage_of_daily_limit != null
+                            ? pe.sugar_percentage_of_daily_limit + "%"
+                            : "N/A";
+                        profileText =
+`Profile type: ${pe.profile_type || "N/A"}
+Approx. daily sugar limit: ${limit}
+Sugar in this product (per 100 g): ${sugar100} (~${pct} of daily limit)
+Advice: ${pe.summary || "N/A"}`;
+                    }
+
+                    const aiAdvice = h.ai_advice || null;
+                    const aiError = h.ai_advice_error || null;
+
+                    const lines = [
+                        `Product: ${data.product_name} (${data.brand})`,
+                        `Nutri-Score: ${data.nutriscore}`,
+                        "",
+                        "Ingredients:",
+                        data.ingredients || "No ingredient info available.",
+                        "",
+                        "Good ingredients:",
+                        good,
+                        "",
+                        "Bad / less healthy ingredients:",
+                        bad,
+                        "",
+                        "Nutrients that are high per 100 g:",
+                        highList,
+                        "",
+                        "Generic health summary:",
+                        h.generic_summary || "No summary available.",
+                        "",
+                        "Personalised for your profile:",
+                        profileText
+                    ];
+
+                    if (aiAdvice) {
+                        lines.push(
+                            "",
+                            "AI nutrition summary:",
+                            aiAdvice
+                        );
+                    } else if (aiError) {
+                        lines.push(
+                            "",
+                            "(AI analysis note):",
+                            aiError
+                        );
+                    }
+
+                    resultDiv.innerText = lines.join("\n");
+                })
+                .catch(err => {
+                    console.error(err);
+                    resultDiv.innerText = "Failed to fetch product info from server.";
+                });
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        resultDiv.innerText = "Failed to start camera.";
+        scanning = false;
+    }
+});
+</script>
+
+</body>
+</html>
