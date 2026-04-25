@@ -7,7 +7,7 @@ import { ScannerPage } from "./pages/ScannerPage";
 import "./index.css";
 
 export const App: React.FC = () => (
-  <BrowserRouter>
+  <BrowserRouter basename={import.meta.env.PROD ? "/Product-Scanner" : undefined}>
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
