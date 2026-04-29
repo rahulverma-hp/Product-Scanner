@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { BrowserBarcodeReader } from "@zxing/library";
 import { Card } from "../components/Card";
-import { me, scanProduct } from "../api";
+import { deleteProfile, me, scanProduct } from "../api";
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -539,12 +539,30 @@ export const ScannerPage: React.FC = () => {
   };
 
   const handleBack = () => {
+    localStorage.removeItem("guest_mode");
+    localStorage.removeItem("auth_token");
     nav("/login");
   };
 
   const handleExitGuest = () => {
     localStorage.removeItem("guest_mode");
     nav("/login");
+  };
+
+  const handleDeleteProfile = async () => {
+    if (!token) return;
+    const ok = window.confirm(
+      "Delete your profile permanently? This cannot be undone."
+    );
+    if (!ok) return;
+    try {
+      await deleteProfile(token);
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("guest_mode");
+      nav("/login");
+    } catch (e: any) {
+      alert(e?.message || "Failed to delete profile.");
+    }
   };
 
   const profileLine =
@@ -565,6 +583,11 @@ export const ScannerPage: React.FC = () => {
               {guestMode && (
                 <button className="button secondary" onClick={handleExitGuest}>
                   Exit guest / Login
+                </button>
+              )}
+              {!guestMode && token && (
+                <button className="button secondary" onClick={handleDeleteProfile}>
+                  Delete profile
                 </button>
               )}
               <button className="button secondary" onClick={handleBack}>

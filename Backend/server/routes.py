@@ -134,6 +134,26 @@ def register_routes(app: Flask) -> None:
             return jsonify({"error": "Not authenticated."}), 401
         return jsonify({"profile": profile}), 200
 
+    @app.route("/me", methods=["DELETE"])
+    def delete_me():
+        token = auth_token_from_request()
+        if not token:
+            return jsonify({"error": "Not authenticated."}), 401
+        conn = get_db_connection()
+        profile = get_profile_by_token(conn, token)
+        if not profile:
+            conn.close()
+            return jsonify({"error": "Not authenticated."}), 401
+        pid = profile.get("id")
+        try:
+            # Delete all sessions for this user first, then the profile.
+            conn.execute("DELETE FROM sessions WHERE profile_id = ?", (pid,))
+            conn.execute("DELETE FROM profiles WHERE id = ?", (pid,))
+            conn.commit()
+        finally:
+            conn.close()
+        return jsonify({"ok": True}), 200
+
     @app.route("/scan", methods=["POST"])
     def scan():
         data = request.get_json() or {}

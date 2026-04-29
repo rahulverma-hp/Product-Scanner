@@ -67,6 +67,18 @@ export async function me(token: string): Promise<{ profile: Profile }> {
   return data;
 }
 
+export async function deleteProfile(token: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE_URL}/me`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error || `Delete failed (${res.status})`);
+  }
+  return data;
+}
+
 export async function scanProduct(barcode: string, token?: string | null) {
   const res = await fetch(`${BASE_URL}/scan`, {
     method: "POST",
