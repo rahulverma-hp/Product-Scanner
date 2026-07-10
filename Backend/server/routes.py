@@ -11,7 +11,7 @@ from Backend.lifeve.classifier import HealthClassifier
 from Backend.lifeve.features import extract_feature_row
 from Backend.lifeve.health_engine import build_advice_text, evaluate_health
 
-from .ai import call_openrouter_ai_analysis, call_openrouter_chat
+from .ai import call_assistant_chat, call_openrouter_ai_analysis
 from .auth import (
     auth_token_from_request,
     create_session,
@@ -179,7 +179,7 @@ def register_routes(app: Flask) -> None:
         if len(question) > 2000:
             return jsonify({"error": "Question is too long."}), 400
 
-        answer, error = call_openrouter_chat(question, context=context)
+        answer, error = call_assistant_chat(question, context=context)
         if error:
             return jsonify({"error": error}), 502
         return jsonify({"answer": answer}), 200

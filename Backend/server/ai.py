@@ -57,6 +57,67 @@ def _extract_first_json_object(text: str):
     return None, "Failed to locate complete JSON object in AI response."
 
 
+def call_gemini_chat(question, context=None):
+    """
+    Chat completion via the Google Gemini REST API.
+    Returns (answer_text_or_None, error_or_None).
+    """
+    api_key = (os.environ.get("GEMINI_API_KEY") or "").strip()
+    if not api_key:
+        return None, "GEMINI_API_KEY not set."
+
+    model_name = (os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash").strip()
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": str(question)[:4000]}]}],
+        "generationConfig": {"temperature": 0.5, "maxOutputTokens": 700},
+    }
+    if context:
+        payload["systemInstruction"] = {"parts": [{"text": str(context)[:16000]}]}
+
+    try:
+        response = requests.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent",
+            headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+            json=payload,
+            timeout=45,
+        )
+        if response.status_code != 200:
+            detail = ""
+            try:
+                detail = (response.json().get("error") or {}).get("message") or ""
+            except Exception:
+                pass
+            return None, f"Gemini API HTTP {response.status_code}{': ' + detail if detail else ''}"
+
+        data = response.json()
+        candidates = data.get("candidates") or []
+        if not candidates:
+            return None, "Gemini returned no candidates."
+        parts = ((candidates[0] or {}).get("content") or {}).get("parts") or []
+        text = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
+        if not text.strip():
+            return None, "Gemini returned an empty answer."
+        return text.strip(), None
+    except Exception as e:
+        return None, f"Error calling Gemini API: {e.__class__.__name__}"
+
+
+def call_assistant_chat(question, context=None):
+    """
+    Chat for the portfolio assistant. Prefers Gemini when GEMINI_API_KEY is set,
+    falls back to OpenRouter. Returns (answer_text_or_None, error_or_None).
+    """
+    if (os.environ.get("GEMINI_API_KEY") or "").strip():
+        answer, error = call_gemini_chat(question, context=context)
+        if answer:
+            return answer, None
+        # Gemini configured but failed — try OpenRouter as backup if available.
+        if (os.environ.get("OPENROUTER_API_KEY") or "").strip():
+            return call_openrouter_chat(question, context=context)
+        return None, error
+    return call_openrouter_chat(question, context=context)
+
+
 def call_openrouter_chat(question, context=None):
     """
     Simple chat completion for the portfolio "Ask Me Anything" assistant.
@@ -64,7 +125,7 @@ def call_openrouter_chat(question, context=None):
     """
     api_key = (os.environ.get("OPENROUTER_API_KEY") or "").strip()
     if not api_key:
-        return None, "OPENROUTER_API_KEY not set. Put it in Backend/.env (see Backend/.env.example)."
+        return None, "No AI key configured. Set GEMINI_API_KEY or OPENROUTER_API_KEY in Backend/.env."
 
     messages = []
     if context:
