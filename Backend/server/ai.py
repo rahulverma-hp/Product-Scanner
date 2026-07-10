@@ -57,6 +57,51 @@ def _extract_first_json_object(text: str):
     return None, "Failed to locate complete JSON object in AI response."
 
 
+def call_openrouter_chat(question, context=None):
+    """
+    Simple chat completion for the portfolio "Ask Me Anything" assistant.
+    Returns (answer_text_or_None, error_or_None).
+    """
+    api_key = (os.environ.get("OPENROUTER_API_KEY") or "").strip()
+    if not api_key:
+        return None, "OPENROUTER_API_KEY not set. Put it in Backend/.env (see Backend/.env.example)."
+
+    messages = []
+    if context:
+        messages.append({"role": "system", "content": str(context)[:16000]})
+    messages.append({"role": "user", "content": str(question)[:4000]})
+
+    model_name = (os.environ.get("OPENROUTER_MODEL") or "deepseek/deepseek-chat").strip()
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json={
+                "model": model_name,
+                "messages": messages,
+                "temperature": 0.5,
+                "max_tokens": 700,
+            },
+            timeout=45,
+        )
+        if response.status_code != 200:
+            return None, f"AI API HTTP {response.status_code}"
+        data = response.json()
+        choices = data.get("choices") or []
+        if not choices:
+            return None, "AI API returned no choices."
+        text = ((choices[0] or {}).get("message") or {}).get("content")
+        if not isinstance(text, str) or not text.strip():
+            return None, "AI returned an empty answer."
+        return text.strip(), None
+    except Exception as e:
+        return None, f"Error calling AI API: {e.__class__.__name__}"
+
+
 def call_openrouter_ai_analysis(product, profile):
     """
     Full AI-driven product analysis. Returns (analysis_dict_or_None, error_or_None).

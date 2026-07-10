@@ -11,7 +11,7 @@ from Backend.lifeve.classifier import HealthClassifier
 from Backend.lifeve.features import extract_feature_row
 from Backend.lifeve.health_engine import build_advice_text, evaluate_health
 
-from .ai import call_openrouter_ai_analysis
+from .ai import call_openrouter_ai_analysis, call_openrouter_chat
 from .auth import (
     auth_token_from_request,
     create_session,
@@ -167,6 +167,22 @@ def register_routes(app: Flask) -> None:
         finally:
             conn.close()
         return jsonify({"ok": True}), 200
+
+    @app.route("/ask", methods=["POST"])
+    def ask():
+        """Portfolio 'Ask Me Anything' assistant — proxies to OpenRouter server-side."""
+        data = request.get_json() or {}
+        question = (data.get("question") or "").strip()
+        context = data.get("context") or ""
+        if not question:
+            return jsonify({"error": "Question is required."}), 400
+        if len(question) > 2000:
+            return jsonify({"error": "Question is too long."}), 400
+
+        answer, error = call_openrouter_chat(question, context=context)
+        if error:
+            return jsonify({"error": error}), 502
+        return jsonify({"answer": answer}), 200
 
     @app.route("/scan", methods=["POST"])
     def scan():
