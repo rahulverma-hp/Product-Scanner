@@ -6,10 +6,7 @@ Point your camera at a barcode, pull product data from Open Food Facts, and get 
 
 ## Live demo
 
-| | URL |
-|---|---|
-| **App** | https://rahulverma-hp.github.io/Product-Scanner/ |
-| **API** | https://product-scanner-3gh1.onrender.com |
+**App:** https://rahulverma-hp.github.io/Product-Scanner/
 
 Try barcodes: **3017620422003** (Nutella), **5000159484695** (Weetabix), **87104022** (yogurt).
 
