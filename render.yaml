@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: product-scanner
+    runtime: python
+    plan: free
+    buildCommand: bash scripts/render-build.sh
+    startCommand: gunicorn Backend.app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    healthCheckPath: /scan-ui
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: HF_MODELS_ENABLED
+        value: "0"
+      - key: LORA_ADVICE_ENABLED
+        value: "0"
+      - key: OPENROUTER_API_KEY
+        sync: false
