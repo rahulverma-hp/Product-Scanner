@@ -12,7 +12,7 @@ export default defineConfig({
       "/profiles": "http://localhost:5000",
       "/scan": "http://localhost:5000",
       "/auth": "http://localhost:5000",
-      "/me": "http://localhost:5000"
-    }
+      "/me": "http://localhost:5000",
+    },
   }
 });

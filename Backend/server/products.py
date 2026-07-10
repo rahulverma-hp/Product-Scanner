@@ -19,6 +19,25 @@ def _load_local_products() -> dict[str, Any]:
         return {}
 
 
+def fetch_sample_catalog_product(barcode):
+    """Offline fallback from Backend/data/sample_products.json (OpenFoodFacts-shaped list)."""
+    path = os.path.join(BASE_DIR, "data", "sample_products.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            items = json.load(f)
+    except Exception:
+        return None
+    if not isinstance(items, list):
+        return None
+    barcode = str(barcode).strip()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("code") or "").strip() == barcode:
+            return item
+    return None
+
+
 def fetch_local_product_off_shape(barcode):
     """
     Optional offline fallback using Backend/products.json:

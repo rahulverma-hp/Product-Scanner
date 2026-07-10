@@ -15,7 +15,9 @@ frontend/.vite/
 venv/
 Backend/__pycache__/
 Backend/**/__pycache__/
+__pycache__/
 *.py[cod]
+*.pyc
 
 # Local secrets / env
 .env
@@ -26,6 +28,13 @@ frontend/.env.*
 # Local databases / state
 Backend/profiles.db
 *.db
+
+# ML artifacts (large — train locally or deploy separately)
+Backend/models/
+Backend/data/health_classifier_dataset.csv
+Backend/data/health_classifier_dataset.summary.json
+Backend/data/lifeve_advice_train.jsonl
+Backend/data/lifeve_advice_train.summary.json
 
 # Logs
 *.log

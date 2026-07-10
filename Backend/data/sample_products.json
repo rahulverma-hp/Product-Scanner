@@ -1,0 +1,162 @@
+[
+  {
+    "code": "3017620422003",
+    "product_name": "Nutella",
+    "brands": "Ferrero",
+    "ingredients_text": "sugar, palm oil, hazelnuts, skimmed milk powder, fat-reduced cocoa, emulsifier lecithins, vanillin",
+    "nutriscore_grade": "e",
+    "nutriments": {"sugars_100g": 56.3, "fat_100g": 30.9, "salt_100g": 0.1, "saturated-fat_100g": 10.6, "proteins_100g": 6.3, "fiber_100g": 0}
+  },
+  {
+    "code": "5000159484695",
+    "product_name": "Weetabix",
+    "brands": "Weetabix",
+    "ingredients_text": "wholegrain wheat (95%), malted barley extract, sugar, salt, niacin, iron, riboflavin, thiamin, folic acid",
+    "nutriscore_grade": "a",
+    "nutriments": {"sugars_100g": 4.2, "fat_100g": 2.0, "salt_100g": 0.28, "saturated-fat_100g": 0.4, "proteins_100g": 12.0, "fiber_100g": 10.0}
+  },
+  {
+    "code": "7622210449283",
+    "product_name": "Oreo Cookies",
+    "brands": "Oreo",
+    "ingredients_text": "wheat flour, sugar, palm oil, glucose-fructose syrup, fat reduced cocoa powder, raising agents, salt, emulsifier, flavouring",
+    "nutriscore_grade": "e",
+    "nutriments": {"sugars_100g": 38.0, "fat_100g": 20.0, "salt_100g": 0.9, "saturated-fat_100g": 6.5, "proteins_100g": 5.0, "fiber_100g": 2.0}
+  },
+  {
+    "code": "87104022",
+    "product_name": "Greek Style Natural Yogurt",
+    "brands": "Generic Dairy",
+    "ingredients_text": "milk, cream, live cultures",
+    "nutriscore_grade": "b",
+    "nutriments": {"sugars_100g": 3.8, "fat_100g": 9.5, "salt_100g": 0.1, "saturated-fat_100g": 6.0, "proteins_100g": 9.0, "fiber_100g": 0}
+  },
+  {
+    "code": "87125612",
+    "product_name": "Sparkling Lemonade",
+    "brands": "Refresh",
+    "ingredients_text": "carbonated water, sugar, lemon juice from concentrate, citric acid, natural flavouring",
+    "nutriscore_grade": "d",
+    "nutriments": {"sugars_100g": 10.5, "fat_100g": 0, "salt_100g": 0.02, "saturated-fat_100g": 0, "proteins_100g": 0, "fiber_100g": 0}
+  },
+  {
+    "code": "5449000000996",
+    "product_name": "Coca-Cola",
+    "brands": "Coca-Cola",
+    "ingredients_text": "carbonated water, sugar, colour caramel, phosphoric acid, natural flavours, caffeine",
+    "nutriscore_grade": "e",
+    "nutriments": {"sugars_100g": 10.6, "fat_100g": 0, "salt_100g": 0.01, "saturated-fat_100g": 0, "proteins_100g": 0, "fiber_100g": 0}
+  },
+  {
+    "code": "8000500310427",
+    "product_name": "Barilla Spaghetti",
+    "brands": "Barilla",
+    "ingredients_text": "durum wheat semolina, water",
+    "nutriscore_grade": "a",
+    "nutriments": {"sugars_100g": 3.5, "fat_100g": 2.0, "salt_100g": 0.01, "saturated-fat_100g": 0.5, "proteins_100g": 13.0, "fiber_100g": 3.0}
+  },
+  {
+    "code": "87157247",
+    "product_name": "Hummus Classic",
+    "brands": "Fresh Foods",
+    "ingredients_text": "chickpeas, water, tahini, olive oil, lemon juice, garlic, salt",
+    "nutriscore_grade": "a",
+    "nutriments": {"sugars_100g": 0.8, "fat_100g": 14.0, "salt_100g": 0.9, "saturated-fat_100g": 2.0, "proteins_100g": 7.5, "fiber_100g": 6.0}
+  },
+  {
+    "code": "87125634",
+    "product_name": "Salted Potato Chips",
+    "brands": "Crunchy",
+    "ingredients_text": "potatoes, sunflower oil, salt",
+    "nutriscore_grade": "c",
+    "nutriments": {"sugars_100g": 0.5, "fat_100g": 32.0, "salt_100g": 1.6, "saturated-fat_100g": 3.5, "proteins_100g": 6.0, "fiber_100g": 4.0}
+  },
+  {
+    "code": "87125656",
+    "product_name": "Diet Cola",
+    "brands": "Refresh",
+    "ingredients_text": "carbonated water, colour caramel, phosphoric acid, sweeteners aspartame, acesulfame k, natural flavours, caffeine",
+    "nutriscore_grade": "c",
+    "nutriments": {"sugars_100g": 0, "fat_100g": 0, "salt_100g": 0.02, "saturated-fat_100g": 0, "proteins_100g": 0, "fiber_100g": 0}
+  },
+  {
+    "code": "87125678",
+    "product_name": "Whole Grain Oats",
+    "brands": "Morning Bowl",
+    "ingredients_text": "whole grain oats",
+    "nutriscore_grade": "a",
+    "nutriments": {"sugars_100g": 1.0, "fat_100g": 7.0, "salt_100g": 0.01, "saturated-fat_100g": 1.2, "proteins_100g": 13.0, "fiber_100g": 10.0}
+  },
+  {
+    "code": "87125690",
+    "product_name": "Milk Chocolate Bar",
+    "brands": "Sweet Co",
+    "ingredients_text": "sugar, cocoa butter, whole milk powder, cocoa mass, emulsifier, vanilla",
+    "nutriscore_grade": "e",
+    "nutriments": {"sugars_100g": 56.0, "fat_100g": 30.0, "salt_100g": 0.2, "saturated-fat_100g": 18.0, "proteins_100g": 7.0, "fiber_100g": 2.0}
+  },
+  {
+    "code": "87125712",
+    "product_name": "Smoked Salmon",
+    "brands": "Ocean Fresh",
+    "ingredients_text": "salmon, salt",
+    "nutriscore_grade": "b",
+    "nutriments": {"sugars_100g": 0, "fat_100g": 8.0, "salt_100g": 2.5, "saturated-fat_100g": 1.5, "proteins_100g": 22.0, "fiber_100g": 0}
+  },
+  {
+    "code": "87125734",
+    "product_name": "Instant Noodles Chicken",
+    "brands": "Quick Meal",
+    "ingredients_text": "wheat flour, palm oil, salt, monosodium glutamate, sugar, flavouring, dehydrated vegetables",
+    "nutriscore_grade": "d",
+    "nutriments": {"sugars_100g": 2.5, "fat_100g": 17.0, "salt_100g": 4.5, "saturated-fat_100g": 8.0, "proteins_100g": 9.0, "fiber_100g": 2.0}
+  },
+  {
+    "code": "87125756",
+    "product_name": "Mixed Berry Smoothie",
+    "brands": "Fruit Lab",
+    "ingredients_text": "apple juice, strawberry puree, blueberry puree, banana puree, lemon juice",
+    "nutriscore_grade": "b",
+    "nutriments": {"sugars_100g": 11.0, "fat_100g": 0.2, "salt_100g": 0.01, "saturated-fat_100g": 0, "proteins_100g": 0.5, "fiber_100g": 1.5}
+  },
+  {
+    "code": "87125778",
+    "product_name": "Peanut Butter Crunchy",
+    "brands": "Nut House",
+    "ingredients_text": "peanuts, salt",
+    "nutriscore_grade": "b",
+    "nutriments": {"sugars_100g": 4.0, "fat_100g": 50.0, "salt_100g": 0.7, "saturated-fat_100g": 8.0, "proteins_100g": 25.0, "fiber_100g": 6.0}
+  },
+  {
+    "code": "87125790",
+    "product_name": "Frozen Pepperoni Pizza",
+    "brands": "Pizza Night",
+    "ingredients_text": "wheat flour, tomato puree, mozzarella, pepperoni, palm oil, sugar, salt, yeast",
+    "nutriscore_grade": "d",
+    "nutriments": {"sugars_100g": 4.0, "fat_100g": 11.0, "salt_100g": 1.4, "saturated-fat_100g": 5.0, "proteins_100g": 11.0, "fiber_100g": 2.5}
+  },
+  {
+    "code": "87125812",
+    "product_name": "Canned Lentil Soup",
+    "brands": "Pantry",
+    "ingredients_text": "water, lentils, carrots, onions, olive oil, salt, spices",
+    "nutriscore_grade": "a",
+    "nutriments": {"sugars_100g": 2.0, "fat_100g": 1.5, "salt_100g": 0.8, "saturated-fat_100g": 0.3, "proteins_100g": 6.0, "fiber_100g": 4.5}
+  },
+  {
+    "code": "87125834",
+    "product_name": "Energy Drink",
+    "brands": "Boost",
+    "ingredients_text": "water, sugar, glucose, citric acid, taurine, caffeine, vitamins, flavouring",
+    "nutriscore_grade": "e",
+    "nutriments": {"sugars_100g": 11.0, "fat_100g": 0, "salt_100g": 0.1, "saturated-fat_100g": 0, "proteins_100g": 0, "fiber_100g": 0}
+  },
+  {
+    "code": "87125856",
+    "product_name": "Whole Wheat Bread",
+    "brands": "Bakery Co",
+    "ingredients_text": "whole grain wheat flour, water, yeast, salt, sunflower seeds",
+    "nutriscore_grade": "a",
+    "nutriments": {"sugars_100g": 3.0, "fat_100g": 3.0, "salt_100g": 1.0, "saturated-fat_100g": 0.5, "proteins_100g": 10.0, "fiber_100g": 7.0}
+  }
+]

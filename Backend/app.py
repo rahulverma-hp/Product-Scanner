@@ -22,4 +22,5 @@ app = create_app()
 
 if __name__ == "__main__":
     init_db()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Disable reloader — loading TinyLlama twice (parent + child) can OOM/crash the server.
+    app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)

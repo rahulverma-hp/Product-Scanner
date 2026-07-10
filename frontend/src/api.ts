@@ -79,14 +79,55 @@ export async function deleteProfile(token: string): Promise<{ ok: boolean }> {
   return data;
 }
 
+export async function scanPackagePhoto(
+  image: File,
+  barcode?: string,
+  token?: string | null
+) {
+  const form = new FormData();
+  form.append("image", image);
+  if (barcode?.trim()) {
+    form.append("barcode", barcode.trim());
+  }
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  const res = await fetch(`${BASE_URL}/scan/package-photo`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`Server error (${res.status}). Is the backend running on port 5000?`);
+  }
+  if (!res.ok) {
+    throw new Error(data?.error || `Package photo scan failed (${res.status})`);
+  }
+  return data;
+}
+
 export async function scanProduct(barcode: string, token?: string | null) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   const res = await fetch(`${BASE_URL}/scan`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      barcode,
-      ...(token ? { auth_token: token } : {}),
-    }),
+    headers,
+    body: JSON.stringify({ barcode }),
   });
-  return res.json();
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`Server error (${res.status}). Is the backend running on port 5000?`);
+  }
+  if (!res.ok) {
+    throw new Error(data?.error || `Scan failed (${res.status})`);
+  }
+  return data;
 }

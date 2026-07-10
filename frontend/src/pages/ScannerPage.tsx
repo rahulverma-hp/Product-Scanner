@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { BrowserBarcodeReader } from "@zxing/library";
 import { Card } from "../components/Card";
-import { deleteProfile, me, scanProduct } from "../api";
+import { deleteProfile, me, scanPackagePhoto, scanProduct } from "../api";
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -34,6 +34,8 @@ interface HealthBlock {
 
 interface ScanProfile {
   id?: number;
+  username?: string;
+  display_name?: string | null;
   name?: string;
   age?: number;
   gender?: string;
@@ -42,14 +44,59 @@ interface ScanProfile {
   type?: string;
 }
 
+interface PersonalisedAdvice {
+  personalised_summary?: string;
+  source?: string;
+  disclaimer?: string;
+}
+
 interface ScanResultData {
   product_name: string;
   brand: string;
   ingredients: string;
   health: HealthBlock;
   ai_analysis?: any;
+  ai_analysis_error?: string | null;
+  hf_insights?: HfInsights | null;
+  ml_prediction?: {
+    health_tier?: string;
+    tier?: string;
+    label?: string;
+    confidence?: number;
+    flags?: Record<string, { active?: boolean; confidence?: number }>;
+  } | null;
+  ml_prediction_error?: string | null;
+  personalised?: PersonalisedAdvice | null;
+  package_scan?: { ingredients_text?: string | null; error?: string } | null;
   profile?: ScanProfile | null;
   data_source?: "openfoodfacts" | "foodrepo" | string;
+}
+
+interface NerEntity {
+  word?: string;
+  entity_group?: string;
+  score?: number;
+}
+
+interface HfInsights {
+  ingredient_ner?: {
+    model?: string;
+    status?: string;
+    message?: string;
+    entities?: NerEntity[];
+    risk_entities?: NerEntity[];
+    positive_entities?: NerEntity[];
+    risk_flags?: string[];
+    positive_flags?: string[];
+    error?: string;
+  };
+  category_prediction?: {
+    model?: string;
+    source?: string;
+    category_names?: string[];
+    categories?: { name?: string; score?: number | null }[];
+    error?: string;
+  };
 }
 
 function ResultSection({
@@ -106,6 +153,32 @@ function ResultDetails({
       <div className="result-details-body">{children}</div>
     </details>
   );
+}
+
+function formatCategoryName(name: string) {
+  return name.replace(/^en:/i, "").replace(/-/g, " ").trim();
+}
+
+function mapScanResponse(data: any): ScanResultData {
+  const ingredients =
+    data.ingredients?.trim() ||
+    data.package_scan?.ingredients_text?.trim() ||
+    "";
+  return {
+    product_name: data.product_name ?? "Unknown product",
+    brand: data.brand ?? "Unknown brand",
+    ingredients,
+    health: data.health ?? {},
+    ai_analysis: data.ai_analysis ?? null,
+    ai_analysis_error: data.ai_analysis_error ?? null,
+    hf_insights: data.hf_insights ?? null,
+    ml_prediction: data.ml_prediction ?? null,
+    ml_prediction_error: data.ml_prediction_error ?? null,
+    personalised: data.personalised ?? null,
+    package_scan: data.package_scan ?? null,
+    profile: data.profile ?? null,
+    data_source: data.data_source,
+  };
 }
 
 function DataSourceBadge({ source }: { source?: string }) {
@@ -222,6 +295,8 @@ function ProfileForYouBlock({
 }) {
   const username =
     pe.username?.trim() ||
+    profile?.display_name?.trim() ||
+    profile?.username?.trim() ||
     profile?.name?.trim() ||
     "Your profile";
   const rec = pe.recommendation?.trim();
@@ -269,16 +344,85 @@ function ScanResultView({ data }: { data: ScanResultData }) {
   const bad = h.bad_ingredients ?? [];
   const high = h.high_nutrients ?? [];
   const ai = data.ai_analysis || null;
+  const hf = data.hf_insights ?? null;
+  const ml = data.ml_prediction ?? null;
+  const mlTier = ml?.health_tier ?? ml?.tier;
+  const personalised = data.personalised ?? null;
+  const ner = hf?.ingredient_ner;
+  const foodTypes = (hf?.category_prediction?.category_names ?? [])
+    .map(formatCategoryName)
+    .filter(Boolean);
+  const fromPhoto =
+    !!data.package_scan?.ingredients_text ||
+    (data.data_source ?? "").includes("package_photo");
 
   return (
     <div className="result-panel">
       <ResultSection title="Product">
         <div className="result-product-header">
           <DataSourceBadge source={data.data_source} />
+          {fromPhoto ? (
+            <span className="result-source-badge result-source-badge--package_photo">
+              Label photo
+            </span>
+          ) : null}
         </div>
         <p className="result-product-name">{data.product_name}</p>
         <p className="result-brand">{data.brand}</p>
       </ResultSection>
+
+      {pe ? (
+        <ResultSection title="For you">
+          <ProfileForYouBlock pe={pe} profile={data.profile} />
+        </ResultSection>
+      ) : null}
+
+      {mlTier ? (
+        <ResultSection title="Quick health rating">
+          <p className="result-summary result-summary--block">
+            <strong style={{ textTransform: "capitalize" }}>{mlTier}</strong>
+            {typeof ml?.confidence === "number"
+              ? ` — ${Math.round(ml.confidence * 100)}% model confidence`
+              : ""}
+          </p>
+          {ml?.flags && Object.keys(ml.flags).length > 0 ? (
+            <ResultDetails summary="What the model noticed">
+              <ul className="result-nutrient-list">
+                {Object.entries(ml.flags).map(([flag, info]) => (
+                  <li key={flag}>
+                    <strong>{flag.replace(/_/g, " ")}</strong>
+                    <span className="result-muted">
+                      {" "}
+                      — {info?.active ? "likely present" : "unlikely"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </ResultDetails>
+          ) : null}
+        </ResultSection>
+      ) : data.ml_prediction_error ? (
+        <ResultSection title="Quick health rating">
+          <p className="result-muted">{data.ml_prediction_error}</p>
+        </ResultSection>
+      ) : null}
+
+      <ResultSection title="Health summary">
+        <HealthAnalysisBlock health={h} />
+      </ResultSection>
+
+      {personalised?.personalised_summary ? (
+        <ResultSection title="Personalised advice">
+          <p className="result-summary result-summary--block">
+            {personalised.personalised_summary}
+          </p>
+          {personalised.disclaimer ? (
+            <p className="result-muted" style={{ marginTop: 8 }}>
+              {personalised.disclaimer}
+            </p>
+          ) : null}
+        </ResultSection>
+      ) : null}
 
       <ResultSection title="Ingredients">
         <p className="result-ingredients">
@@ -291,7 +435,18 @@ function ScanResultView({ data }: { data: ScanResultData }) {
         <ChipList items={good} variant="good" />
         <p className="result-subheading result-subheading--spaced">Less healthy signals</p>
         <ChipList items={bad} variant="bad" />
+        {ner?.status === "loading" && ner.message ? (
+          <p className="result-muted" style={{ marginTop: 10 }}>
+            {ner.message}
+          </p>
+        ) : null}
       </ResultSection>
+
+      {foodTypes.length > 0 ? (
+        <ResultSection title="Food type">
+          <ChipList items={foodTypes} variant="good" />
+        </ResultSection>
+      ) : null}
 
       <ResultSection title="Nutrients high per 100 g">
         {high.length === 0 ? (
@@ -412,24 +567,12 @@ function ScanResultView({ data }: { data: ScanResultData }) {
       ) : (
         <ResultSection title="AI analysis">
           <p className="result-muted">
-            No AI analysis returned for this scan.
+            {data.ai_analysis_error ||
+              "No AI analysis returned for this scan."}
           </p>
         </ResultSection>
       )}
 
-      {h.ai_advice && (
-        <ResultSection title="AI nutrition summary">
-          <ResultDetails summary="Show AI text" defaultOpen>
-            <div className="result-ai">{h.ai_advice}</div>
-          </ResultDetails>
-        </ResultSection>
-      )}
-
-      {!h.ai_advice && h.ai_advice_error && (
-        <ResultSection title="AI analysis">
-          <p className="result-muted">{h.ai_advice_error}</p>
-        </ResultSection>
-      )}
     </div>
   );
 }
@@ -444,9 +587,12 @@ export const ScannerPage: React.FC = () => {
   const [viewerUsername, setViewerUsername] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [guestMode, setGuestMode] = useState(false);
+  const [lastBarcode, setLastBarcode] = useState("");
+  const [photoBarcode, setPhotoBarcode] = useState("");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const codeReaderRef = useRef<BrowserBarcodeReader | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const guest = localStorage.getItem("guest_mode") === "1";
@@ -507,25 +653,18 @@ export const ScannerPage: React.FC = () => {
             setHint("Fetching product…");
             try {
               const data = await scanProduct(barcode, token);
-              if (data.error) {
-                setHint(null);
-                setError(data.error);
-                return;
-              }
               setHint(null);
-              setResult({
-                product_name: data.product_name ?? "Unknown product",
-                brand: data.brand ?? "Unknown brand",
-                ingredients: data.ingredients ?? "",
-                health: data.health ?? {},
-                ai_analysis: data.ai_analysis ?? null,
-                profile: data.profile ?? null,
-                data_source: data.data_source,
-              });
+              setLastBarcode(barcode);
+              setPhotoBarcode(barcode);
+              setResult(mapScanResponse(data));
             } catch (e) {
               console.error(e);
               setHint(null);
-              setError("Failed to fetch product info from server.");
+              setError(
+                e instanceof Error
+                  ? e.message
+                  : "Failed to fetch product info from server."
+              );
             }
           }
         }
@@ -535,6 +674,41 @@ export const ScannerPage: React.FC = () => {
       setHint(null);
       setError("Failed to start camera.");
       setScanning(false);
+    }
+  };
+
+  const handlePhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!guestMode && !token) {
+      alert("Please sign in first.");
+      return;
+    }
+    setHint("Reading package label…");
+    setError(null);
+    setResult(null);
+    try {
+      const data = await scanPackagePhoto(
+        file,
+        photoBarcode.trim() || lastBarcode || undefined,
+        token
+      );
+      setHint(null);
+      setResult(mapScanResponse(data));
+      if (
+        data.package_scan?.error &&
+        !data.ingredients &&
+        !data.package_scan?.ingredients_text
+      ) {
+        setError(data.package_scan.error);
+      }
+    } catch (err) {
+      setHint(null);
+      setError(err instanceof Error ? err.message : "Failed to read package photo.");
+    } finally {
+      if (photoInputRef.current) {
+        photoInputRef.current.value = "";
+      }
     }
   };
 
@@ -602,6 +776,42 @@ export const ScannerPage: React.FC = () => {
                 className="scanner-video"
               />
               <div className="scanner-video-focus" />
+            </div>
+
+            <div className="scanner-photo-section">
+              <p className="scanner-photo-title">Can&apos;t read the label?</p>
+              <p className="result-muted scanner-photo-hint">
+                Upload a clear photo of the ingredients list. Add a barcode below if you
+                have one — it helps match the product.
+              </p>
+              <label className="scanner-photo-label" htmlFor="package-photo-input">
+                Barcode (optional)
+              </label>
+              <input
+                id="package-photo-barcode"
+                className="scanner-photo-input"
+                type="text"
+                inputMode="numeric"
+                placeholder="e.g. 3017620422003"
+                value={photoBarcode}
+                onChange={(e) => setPhotoBarcode(e.target.value)}
+              />
+              <input
+                id="package-photo-input"
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="scanner-photo-file"
+                onChange={handlePhotoSelected}
+              />
+              <button
+                type="button"
+                className="button secondary scanner-photo-button"
+                onClick={() => photoInputRef.current?.click()}
+              >
+                Read label from photo
+              </button>
             </div>
           </Card>
         </div>

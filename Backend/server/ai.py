@@ -71,7 +71,7 @@ def call_openrouter_ai_analysis(product, profile):
     ingredients_text = product.get("ingredients_text", "") or ""
     nutriments = product.get("nutriments", {}) or {}
 
-    username = (profile or {}).get("name")
+    username = (profile or {}).get("display_name") or (profile or {}).get("username")
     age = (profile or {}).get("age")
     gender = (profile or {}).get("gender")
     height_cm = (profile or {}).get("height_cm")

@@ -130,6 +130,50 @@ a {
   pointer-events: none;
 }
 
+.scanner-photo-section {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.scanner-photo-title {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.scanner-photo-hint {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+}
+
+.scanner-photo-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.scanner-photo-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 0.9rem;
+}
+
+.scanner-photo-file {
+  display: none;
+}
+
+.scanner-photo-button {
+  width: 100%;
+}
+
 .profile-actions {
   margin-top: 12px;
 }
@@ -277,6 +321,18 @@ a {
   border: 1px solid rgba(192, 57, 43, 0.28);
 }
 
+.result-inline-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--border);
+}
+
+.result-model-meta {
+  margin-bottom: 8px;
+}
+
 .result-bullet {
   margin: 0 0 8px;
   padding-left: 1.1rem;
@@ -361,6 +417,10 @@ a {
 
 .result-product-header {
   margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 
 .result-source-badge {
@@ -386,6 +446,12 @@ a {
   background: rgba(139, 90, 43, 0.12);
   border-color: rgba(139, 90, 43, 0.35);
   color: #5c3d1e;
+}
+
+.result-source-badge--package_photo {
+  background: rgba(106, 76, 147, 0.12);
+  border-color: rgba(106, 76, 147, 0.35);
+  color: #4a3560;
 }
 
 /* Native <details> accordions — tap-friendly on mobile */

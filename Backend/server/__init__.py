@@ -8,12 +8,21 @@ from .db import init_db
 from .routes import register_routes
 
 
+def _warm_optional_models() -> None:
+    try:
+        from Backend.lifeve.hf_ner import warm_hf_models
+
+        warm_hf_models()
+    except Exception:
+        pass
+
+
 def create_app() -> Flask:
     load_env()
     app = Flask(__name__, template_folder="templates")
     CORS(app)
-    # Ensure tables exist even when running under gunicorn (Render).
     init_db()
     register_routes(app)
+    _warm_optional_models()
     return app
 

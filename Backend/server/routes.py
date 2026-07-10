@@ -5,6 +5,12 @@ import sqlite3
 
 from flask import Flask, jsonify, render_template, request
 
+from Backend.lifeve.enrichment import enrich_product
+from Backend.lifeve.advice_lora import call_lora_advice
+from Backend.lifeve.classifier import HealthClassifier
+from Backend.lifeve.features import extract_feature_row
+from Backend.lifeve.health_engine import build_advice_text, evaluate_health
+
 from .ai import call_openrouter_ai_analysis
 from .auth import (
     auth_token_from_request,
@@ -14,11 +20,19 @@ from .auth import (
     verify_password,
 )
 from .db import get_db_connection
+from Backend.lifeve.hf_vision import extract_ingredients_from_image, extract_nutrition_from_image
 from .products import (
     fetch_foodrepo_off_product,
     fetch_local_product_off_shape,
     fetch_openfoodfacts_product,
+    fetch_sample_catalog_product,
 )
+
+_health_classifier = HealthClassifier.load()
+
+
+def _lora_runtime_enabled() -> bool:
+    return os.getenv("LORA_ADVICE_ENABLED", "").strip().lower() in {"1", "true", "yes"}
 
 
 def register_routes(app: Flask) -> None:
@@ -156,69 +170,208 @@ def register_routes(app: Flask) -> None:
 
     @app.route("/scan", methods=["POST"])
     def scan():
-        data = request.get_json() or {}
-        barcode = data.get("barcode")
-        token = auth_token_from_request()
+        try:
+            return _handle_scan()
+        except Exception as exc:
+            return jsonify({"error": f"Scan failed: {exc.__class__.__name__}: {exc}"}), 500
 
-        if not barcode:
-            return jsonify({"error": "No barcode received"})
+    @app.route("/scan/package-photo", methods=["POST"])
+    def scan_package_photo():
+        """Season 2: extract ingredients/nutrition from a packaging photo (HF vision models)."""
+        try:
+            image = request.files.get("image")
+            if image is None or not image.filename:
+                return jsonify({"error": "Upload an image file as multipart field 'image'."}), 400
 
-        conn = get_db_connection()
-        effective_profile = get_profile_by_token(conn, token)
-        conn.close()
-
-        # Allow guest usage: when no token is provided, proceed with a generic analysis.
-        # If a token is provided but invalid, treat it as an auth error.
-        if token and not effective_profile:
-            return jsonify({"error": "Not authenticated."}), 401
-
-        product = None
-        data_source = None
-
-        off_product, off_error = fetch_openfoodfacts_product(barcode)
-        if off_product:
-            product = off_product
-            data_source = "openfoodfacts"
-        else:
-            fr_product = fetch_foodrepo_off_product(barcode)
-            if fr_product:
-                product = fr_product
-                data_source = "foodrepo"
+            mode = (request.form.get("mode") or "ingredients").strip().lower()
+            if mode == "nutrition":
+                result = extract_nutrition_from_image(image)
             else:
-                local_product = fetch_local_product_off_shape(barcode)
-                if local_product:
-                    product = local_product
-                    data_source = "local"
+                result = extract_ingredients_from_image(image)
 
-        if not product:
-            msg = "Could not fetch product data."
-            if off_error:
-                msg += f" OpenFoodFacts: {off_error}."
-            if not (os.environ.get("FOODREPO_API_KEY") or "").strip():
-                msg += (
-                    " Set environment variable FOODREPO_API_KEY (from foodrepo.org) "
-                    "to also search Open Food Repo as a backup."
+            barcode = (request.form.get("barcode") or "").strip()
+            if barcode and result.get("ingredients_text"):
+                return _handle_scan_with_product_override(
+                    barcode=barcode,
+                    ingredients_text=result["ingredients_text"],
+                    package_scan=result,
                 )
+
+            return jsonify({"package_scan": result}), 200
+        except Exception as exc:
+            return jsonify({"error": f"Package scan failed: {exc.__class__.__name__}: {exc}"}), 500
+
+
+def _handle_scan():
+    data = request.get_json() or {}
+    barcode = data.get("barcode")
+    token = auth_token_from_request()
+
+    if not barcode:
+        return jsonify({"error": "No barcode received"}), 400
+
+    conn = get_db_connection()
+    effective_profile = get_profile_by_token(conn, token)
+    conn.close()
+
+    if token and not effective_profile:
+        return jsonify({"error": "Not authenticated."}), 401
+
+    product = None
+    data_source = None
+
+    off_product, off_error = fetch_openfoodfacts_product(barcode)
+    if off_product:
+        product = off_product
+        data_source = "openfoodfacts"
+    else:
+        fr_product = fetch_foodrepo_off_product(barcode)
+        if fr_product:
+            product = fr_product
+            data_source = "foodrepo"
+        else:
+            local_product = fetch_local_product_off_shape(barcode)
+            if local_product:
+                product = local_product
+                data_source = "local"
             else:
-                msg += " Not found in Open Food Repo either."
-            msg += " You can also add a barcode entry to Backend/products.json for offline testing."
-            return jsonify({"error": msg})
+                sample_product = fetch_sample_catalog_product(barcode)
+                if sample_product:
+                    product = sample_product
+                    data_source = "sample_catalog"
 
-        name = product.get("product_name", "Unknown product")
-        brand = product.get("brands", "Unknown brand")
-        ingredients = product.get("ingredients_text", "No ingredient info available")
-        ai_analysis, ai_analysis_error = call_openrouter_ai_analysis(product, effective_profile)
-        if ai_analysis_error:
-            return jsonify({"error": ai_analysis_error}), 502
+    if not product:
+        msg = "Could not fetch product data."
+        if off_error:
+            msg += f" OpenFoodFacts: {off_error}."
+        if not (os.environ.get("FOODREPO_API_KEY") or "").strip():
+            msg += (
+                " Set environment variable FOODREPO_API_KEY (from foodrepo.org) "
+                "to also search Open Food Repo as a backup."
+            )
+        else:
+            msg += " Not found in Open Food Repo either."
+        msg += " Try a sample barcode like 3017620422003 (Nutella) or add an entry to Backend/products.json."
+        return jsonify({"error": msg}), 404
 
-        return jsonify(
-            {
-                "product_name": name,
-                "brand": brand,
-                "ingredients": ingredients,
-                "ai_analysis": ai_analysis,
-                "profile": effective_profile,
-                "data_source": data_source,
-            }
+    name = product.get("product_name", "Unknown product")
+    brand = product.get("brands", "Unknown brand")
+    ingredients = product.get("ingredients_text", "No ingredient info available")
+
+    product, hf_insights = enrich_product(product)
+    health = evaluate_health(product, profile=effective_profile, hf_insights=hf_insights)
+
+    ml_prediction = None
+    ml_prediction_error = None
+    if _health_classifier is not None:
+        try:
+            feature_row = extract_feature_row(product, profile=effective_profile, health=health)
+            ml_prediction = _health_classifier.predict(feature_row)
+        except Exception as exc:
+            ml_prediction_error = f"{exc.__class__.__name__}: {exc}"
+
+    ai_analysis, ai_analysis_error = call_openrouter_ai_analysis(product, effective_profile)
+
+    lora_advice = None
+    lora_advice_error = None
+    if _lora_runtime_enabled():
+        lora_advice, lora_advice_error = call_lora_advice(
+            product, effective_profile, health=health
         )
+
+    personalised = {
+        "personalised_summary": build_advice_text(health),
+        "source": "rules",
+        "disclaimer": "General food guidance only — not medical advice.",
+    }
+    if lora_advice and lora_advice.get("personalised_summary"):
+        personalised = lora_advice
+
+    payload = {
+        "product_name": name,
+        "brand": brand,
+        "ingredients": ingredients,
+        "health": health,
+        "hf_insights": hf_insights or None,
+        "ml_prediction": ml_prediction,
+        "ml_prediction_error": ml_prediction_error,
+        "personalised": personalised,
+        "ai_analysis": ai_analysis,
+        "ai_analysis_error": ai_analysis_error,
+        "profile": effective_profile,
+        "data_source": data_source,
+    }
+    if _lora_runtime_enabled():
+        payload["lora_advice"] = lora_advice
+        payload["lora_advice_error"] = lora_advice_error
+
+    return jsonify(payload)
+
+
+def _handle_scan_with_product_override(
+    *,
+    barcode: str,
+    ingredients_text: str,
+    package_scan: dict,
+):
+    token = auth_token_from_request()
+    conn = get_db_connection()
+    effective_profile = get_profile_by_token(conn, token)
+    conn.close()
+
+    if token and not effective_profile:
+        return jsonify({"error": "Not authenticated."}), 401
+
+    product = None
+    data_source = None
+    off_product, _ = fetch_openfoodfacts_product(barcode)
+    if off_product:
+        product = off_product
+        data_source = "openfoodfacts"
+    else:
+        sample_product = fetch_sample_catalog_product(barcode)
+        if sample_product:
+            product = sample_product
+            data_source = "sample_catalog"
+
+    if not product:
+        product = {
+            "code": barcode,
+            "product_name": f"Product {barcode}",
+            "brands": "Unknown brand",
+            "ingredients_text": ingredients_text,
+            "nutriments": {},
+        }
+        data_source = "package_photo"
+    else:
+        product = dict(product)
+        product["ingredients_text"] = ingredients_text
+        data_source = f"{data_source}+package_photo"
+
+    product, hf_insights = enrich_product(product)
+    health = evaluate_health(product, profile=effective_profile, hf_insights=hf_insights)
+
+    ml_prediction = None
+    if _health_classifier is not None:
+        try:
+            feature_row = extract_feature_row(product, profile=effective_profile, health=health)
+            ml_prediction = _health_classifier.predict(feature_row)
+        except Exception:
+            pass
+
+    ai_analysis, ai_analysis_error = call_openrouter_ai_analysis(product, effective_profile)
+
+    return jsonify({
+        "product_name": product.get("product_name"),
+        "brand": product.get("brands"),
+        "ingredients": ingredients_text,
+        "health": health,
+        "hf_insights": hf_insights or None,
+        "ml_prediction": ml_prediction,
+        "ai_analysis": ai_analysis,
+        "ai_analysis_error": ai_analysis_error,
+        "package_scan": package_scan,
+        "profile": effective_profile,
+        "data_source": data_source,
+    })
 
