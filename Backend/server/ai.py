@@ -66,7 +66,7 @@ def call_gemini_chat(question, context=None):
     if not api_key:
         return None, "GEMINI_API_KEY not set."
 
-    model_name = (os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash").strip()
+    model_name = (os.environ.get("GEMINI_MODEL") or "gemini-flash-latest").strip()
     payload = {
         "contents": [{"role": "user", "parts": [{"text": str(question)[:4000]}]}],
         "generationConfig": {"temperature": 0.5, "maxOutputTokens": 700},
